@@ -1,23 +1,37 @@
 "use client"
 
 import React, {useState} from 'react'
-import styles from './page.module.css'
+import styles from '../page.module.css'
 import {get} from '@/utils/request'
 import ResourceCard from '@/components/card/ResourceCard'
 
 type Resource = {
-    _id: string
-    title?: string
-    author?: string
-    year?: string | number
-    description?: string
+    _id: string;
+    dc: {
+        title: [{ language: string, title: string }],
+        creator: string,
+        type: string,
+        contributor?: { author?: string[], advisor?: string[] },
+        date: { available: Date, issued: Date },
+        description?: [{ language: string, abstract: string }],
+        format: string,
+        subject?: string[],
+        publisher?: string,
+        rights?: string,
+    },
+    access: {
+        collection: string,
+        restriction: number,
+        hash: string,
+        name: string
+    }
 }
 
 type Props = {
     initialResources?: Resource[]
     initialHasMore?: boolean
     initialLastResource?: string | null
-    slug: string
+    authorName: string
     pageSize: number
     desc: boolean
 }
@@ -26,7 +40,7 @@ export default function ResourcesList({
                                           initialResources = [],
                                           initialHasMore = false,
                                           initialLastResource = null,
-                                          slug,
+                                          authorName,
                                           pageSize,
                                           desc,
                                       }: Props) {
@@ -41,10 +55,9 @@ export default function ResourcesList({
         setLoading(true)
         setError(null)
         try {
-            // Usar el id del último recurso mostrado como cursor (lastResource)
             const lastShown = resources.length > 0 ? resources[resources.length - 1]._id : lastResource
-            const qs = `?pageSize=${pageSize}&desc=${desc}` + (lastShown ? `&lastResource=${encodeURIComponent(lastShown)}` : '')
-            const res = await get(`/collection/${slug}${qs}`)
+            const qs = `?author=${encodeURIComponent(authorName)}&pageSize=${pageSize}&desc=${desc}` + (lastShown ? `&lastResource=${encodeURIComponent(lastShown)}` : '')
+            const res = await get(`/resources${qs}`)
             const data = res.response.data || {}
             const newResources: Resource[] = data.resources ?? []
             const newHasMore: boolean = data.hasMore ?? false
@@ -63,10 +76,12 @@ export default function ResourcesList({
 
     return (
         <div>
-            {resources.length === 0 && <p>No hay recursos para esta colección.</p>}
-            {resources.map(r => (
-                <ResourceCard key={r._id} resource={r} />
-            ))}
+            {resources.length === 0 && <p>No hay recursos para este autor.</p>}
+            {resources.map(resource => {
+                return (
+                    <ResourceCard key={resource._id} resource={resource} />
+                )
+            })}
 
             {error && <p style={{color: 'var(--error, #b00020)'}}>{error}</p>}
 
